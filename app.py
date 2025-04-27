@@ -1,11 +1,11 @@
 import openai
 import streamlit as st
 
-# Set the OpenAI API key from Streamlit secrets
+# Set OpenAI API key from Streamlit secrets
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-# List of interview questions
-questions = [
+# List of 10 predefined questions
+questions_list = [
     "Tell me about yourself.",
     "Why do you want to work with us?",
     "What is your greatest strength?",
@@ -18,34 +18,37 @@ questions = [
     "What are your salary expectations?"
 ]
 
-# Function to evaluate answers using OpenAI API
+# Function to evaluate the answer
 def evaluate_answer(question, answer):
     prompt = f"Question: {question}\nAnswer: {answer}\n\nEvaluate this response on a scale of 1 to 10 and explain why."
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # You can use 'gpt-4' or any other available model
-            messages=[{"role": "user", "content": prompt}],
+        # Using the new OpenAI API
+        response = openai.Completion.create(
+            model="text-davinci-003",  # Or another model (e.g., text-ada-001, etc.)
+            prompt=prompt,
+            max_tokens=100,  # Adjust max tokens if necessary
+            temperature=0.7  # Adjust temperature for response randomness
         )
-        return response['choices'][0]['message']['content']
+        # Return the evaluation result
+        return response.choices[0].text.strip()
     except Exception as e:
+        # Return any errors encountered
         return f"Error evaluating answer: {e}"
 
-# Collect responses from the user
-responses = {}
+# Streamlit UI components
+st.title("Interview Question Evaluator")
 
-for question in questions:
-    user_answer = st.text_input(f"{question}")
-    responses[question] = user_answer
+# Select a question from the predefined list
+question = st.selectbox("Choose a question", questions_list)
 
-if st.button('Evaluate Answers'):
-    # Evaluate all responses
-    results = []
-    for question, answer in responses.items():
+# Input field for answer
+answer = st.text_area("Enter your answer:")
+
+# Button to evaluate the answer
+if st.button("Evaluate Answer"):
+    if answer:
         evaluation = evaluate_answer(question, answer)
-        results.append((question, answer, evaluation))
-
-    # Display the results
-    for result in results:
-        st.write(f"**Question**: {result[0]}")
-        st.write(f"**Answer**: {result[1]}")
-        st.write(f"**Evaluation**: {result[2]}")
+        st.write("Evaluation:")
+        st.write(evaluation)
+    else:
+        st.write("Please enter an answer.")
