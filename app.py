@@ -1,5 +1,6 @@
 import openai
 import streamlit as st
+import re  # Regular expression module to extract the score more reliably
 
 # Set OpenAI API key from Streamlit secrets
 openai.api_key = st.secrets["OPENAI_API_KEY"]
@@ -24,11 +25,18 @@ def evaluate_answer(question, answer):
             max_tokens=150,  # Adjust token limit based on answer length
             temperature=0.7
         )
-        # Return the evaluation result
-        return response['choices'][0]['text'].strip()
+        # Extract the evaluation text
+        evaluation = response['choices'][0]['text'].strip()
+
+        # Use regular expression to extract a score between 1 and 10
+        score_match = re.search(r'(\d+)', evaluation)
+        if score_match:
+            return int(score_match.group(1)), evaluation  # Return both score and explanation
+        else:
+            return None, evaluation  # If no score is found
     except Exception as e:
         # Return any errors encountered
-        return f"Error evaluating answer: {e}"
+        return None, f"Error evaluating answer: {e}"
 
 # Streamlit UI components
 st.title("Interview Question Evaluator")
@@ -49,15 +57,11 @@ if st.button("Evaluate Answers"):
     for question in questions_list:
         answer = answers[question]
         if answer:
-            evaluation = evaluate_answer(question, answer)
-            # Try to extract a score from the evaluation response
-            try:
-                score = int(evaluation.split()[0])  # Assume the first number in the evaluation is the score
+            score, evaluation = evaluate_answer(question, answer)
+            if score is not None:
                 evaluations.append(score)
                 total_score += score
-            except ValueError:
-                st.write(f"Could not extract a valid score for question: '{question}'")
-                evaluations.append(0)
+            st.write(f"Evaluation for '{question}': {evaluation}")
 
     # Calculate the average score
     if evaluations:
@@ -67,4 +71,3 @@ if st.button("Evaluate Answers"):
         st.write(f"Percentage: {percentage:.2f}%")
     else:
         st.write("Please provide answers to all questions.")
-
