@@ -18,9 +18,9 @@ questions_list = [
 def evaluate_answer(question, answer):
     prompt = f"Question: {question}\nAnswer: {answer}\n\nEvaluate this response on a scale of 1 to 10 and explain why."
     try:
-        # Using the old OpenAI API (completion-based, version == 0.28)
+        # Using gpt-3.5-turbo model (which is supported)
         response = openai.Completion.create(
-            model="text-davinci-003",  # Using text-davinci-003 since it is supported in 0.28
+            model="gpt-3.5-turbo",  # Using gpt-3.5-turbo since it is supported
             prompt=prompt,
             max_tokens=150,  # Adjust token limit based on answer length
             temperature=0.7
