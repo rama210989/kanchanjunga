@@ -1,14 +1,10 @@
-import streamlit as st
 import openai
+import streamlit as st
 
-# Streamlit page setup
-st.set_page_config(page_title="Interview Chatbot", layout="wide")
-st.title("🧠 AI Interview Evaluator")
-
-# API Key Input (or use Streamlit secrets later)
+# Set the OpenAI API key from Streamlit secrets
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-# Interview Questions
+# List of interview questions
 questions = [
     "Tell me about yourself.",
     "Why do you want to work with us?",
@@ -22,35 +18,34 @@ questions = [
     "What are your salary expectations?"
 ]
 
-# Collect User Responses
-st.subheader("💬 Please answer the following questions:")
-
-responses = {}
-for idx, question in enumerate(questions):
-    answer = st.text_area(f"{idx+1}. {question}", key=f"q{idx}")
-    responses[question] = answer
-
-# Evaluation function
+# Function to evaluate answers using OpenAI API
 def evaluate_answer(question, answer):
     prompt = f"Question: {question}\nAnswer: {answer}\n\nEvaluate this response on a scale of 1 to 10 and explain why."
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "user", "content": prompt}
-        ]
-    )
-    return response['choices'][0]['message']['content']
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # You can use 'gpt-4' or any other available model
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response['choices'][0]['message']['content']
+    except Exception as e:
+        return f"Error evaluating answer: {e}"
 
-# Button to Submit and Evaluate
-if st.button("🚀 Submit and Get Evaluation"):
-    st.subheader("📊 Evaluation Results:")
+# Collect responses from the user
+responses = {}
+
+for question in questions:
+    user_answer = st.text_input(f"{question}")
+    responses[question] = user_answer
+
+if st.button('Evaluate Answers'):
+    # Evaluate all responses
+    results = []
     for question, answer in responses.items():
-        if answer.strip() != "":
-            with st.spinner(f"Evaluating: {question}"):
-                evaluation = evaluate_answer(question, answer)
-                st.markdown(f"**Question:** {question}")
-                st.markdown(f"**Your Answer:** {answer}")
-                st.success(f"**Evaluation:** {evaluation}")
-                st.markdown("---")
-        else:
-            st.warning(f"Skipped: {question}")
+        evaluation = evaluate_answer(question, answer)
+        results.append((question, answer, evaluation))
+
+    # Display the results
+    for result in results:
+        st.write(f"**Question**: {result[0]}")
+        st.write(f"**Answer**: {result[1]}")
+        st.write(f"**Evaluation**: {result[2]}")
