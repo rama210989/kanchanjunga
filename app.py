@@ -22,18 +22,15 @@ questions_list = [
 def evaluate_answer(question, answer):
     prompt = f"Question: {question}\nAnswer: {answer}\n\nEvaluate this response on a scale of 1 to 10 and explain why."
     try:
-        # Using the new OpenAI API (chat-based)
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # Use a conversational model (GPT-3.5, GPT-4, etc.)
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=100,  # Adjust max tokens if necessary
-            temperature=0.7  # Adjust temperature for response randomness
+        # Using the new OpenAI API (chat-based, version >=1.0.0)
+        response = openai.completions.create(
+            model="gpt-4",  # You can also try gpt-3.5-turbo based on availability
+            prompt=prompt,
+            max_tokens=150,  # Adjust token limit based on answer length
+            temperature=0.7
         )
         # Return the evaluation result
-        return response['choices'][0]['message']['content'].strip()
+        return response['choices'][0]['text'].strip()
     except Exception as e:
         # Return any errors encountered
         return f"Error evaluating answer: {e}"
