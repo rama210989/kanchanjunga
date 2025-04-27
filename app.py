@@ -18,15 +18,18 @@ questions_list = [
 def evaluate_answer(question, answer):
     prompt = f"Question: {question}\nAnswer: {answer}\n\nEvaluate this response on a scale of 1 to 10 and explain why."
     try:
-        # Using gpt-3.5-turbo model (which is supported)
-        response = openai.Completion.create(
-            model="gpt-3.5-turbo",  # Using gpt-3.5-turbo since it is supported
-            prompt=prompt,
+        # Using gpt-3.5-turbo model with the chat-based API
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # Using gpt-3.5-turbo
+            messages=[
+                {"role": "system", "content": "You are an AI that evaluates interview answers on a scale of 1 to 10."},
+                {"role": "user", "content": prompt}
+            ],
             max_tokens=150,  # Adjust token limit based on answer length
             temperature=0.7
         )
         # Extract the evaluation text
-        evaluation = response['choices'][0]['text'].strip()
+        evaluation = response['choices'][0]['message']['content'].strip()
 
         # Use regular expression to extract a score between 1 and 10
         score_match = re.search(r'(\d+)', evaluation)
