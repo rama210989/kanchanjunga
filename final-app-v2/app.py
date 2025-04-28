@@ -1,6 +1,7 @@
 import openai
 import pandas as pd
 import streamlit as st
+import random
 import re
 
 # Set OpenAI API key from Streamlit secrets
@@ -106,6 +107,35 @@ if page == "Candidate":
 elif page == "Admin":
     st.subheader("Admin Page")
     
+    # Option to generate 10 random candidates
+    if st.button("Generate 10 Random Candidates"):
+        sample_names = ["Alice", "Bob", "Charlie", "David", "Eva", "Frank", "Grace", "Hannah", "Ivy", "Jack"]
+        for _ in range(10):
+            name = random.choice(sample_names)
+            answers = {q: f"Random answer for {q}" for q in questions_list}
+            evaluations = []
+            total_score = 0
+            for question, answer in answers.items():
+                score, evaluation = evaluate_answer(question, answer)
+                evaluations.append({
+                    "question": question,
+                    "answer": answer,
+                    "score": score,
+                    "evaluation": evaluation
+                })
+                total_score += score if score else 0
+
+            candidate_record = {
+                "name": name,
+                "evaluations": evaluations,
+                "total_score": total_score,
+                "average_score": total_score / len(questions_list),
+                "percentage": (total_score / (len(questions_list) * 10)) * 100  # Calculate percentage
+            }
+            st.session_state.candidates.append(candidate_record)
+
+        st.success("10 Random Candidates Generated!")
+
     # Check if candidates exist
     if st.session_state.candidates:
         # Create a dataframe from the candidates list
