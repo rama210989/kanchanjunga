@@ -45,89 +45,123 @@ def evaluate_answer(question, answer):
 # Streamlit UI components
 st.title("Interview Question Evaluator")
 
-# Option to upload CSV
-uploaded_file = st.file_uploader("Upload CSV file with candidate responses", type=["csv"])
+# Define pages for candidate and admin
+PAGES = ["Candidate Page", "Admin Page"]
+page = st.sidebar.selectbox("Select Page", PAGES)
 
-# Dictionary to store answers (for manual input)
-answers = {}
+# Candidate Page
+if page == "Candidate Page":
+    st.header("Candidate Interview Form")
 
-if uploaded_file is not None:
-    # Read the uploaded CSV
-    df = pd.read_csv(uploaded_file)
-    
-    # Ensure the CSV has the necessary columns (Name and Answers)
-    required_columns = ["Name", "Answer 1", "Answer 2", "Answer 3", "Answer 4", "Answer 5"]
-    if not all(col in df.columns for col in required_columns):
-        st.error("CSV must contain columns: Name, Answer 1, Answer 2, Answer 3, Answer 4, Answer 5.")
-    else:
-        # Display the uploaded responses
-        st.write(df)
+    candidate_name = st.text_input("Enter your Name", "")
+    answers = {}
 
-        # Evaluate the uploaded responses
-        total_score = 0
-        evaluations = []
-        for index, row in df.iterrows():
-            candidate_name = row["Name"]
-            st.write(f"Evaluating {candidate_name}'s Responses:")
-
-            candidate_scores = []
-            for i, question in enumerate(questions_list):
-                answer = row[f"Answer {i + 1}"]
-                score, evaluation = evaluate_answer(question, answer)
-                if score is not None:
-                    candidate_scores.append(score)
-                    st.write(f"Question: {question}")
-                    st.write(f"Answer: {answer}")
-                    st.write(f"Evaluation: {evaluation}")
-                    st.write(f"Score: {score}")
-            
-            candidate_total_score = sum(candidate_scores)
-            candidate_average_score = candidate_total_score / len(candidate_scores) if candidate_scores else 0
-            candidate_percentage = (candidate_average_score / 10) * 100  # Convert to percentage
-
-            total_score += candidate_total_score
-            evaluations.append({
-                "Name": candidate_name,
-                "Total Score": candidate_total_score,
-                "Average Score": candidate_average_score,
-                "Percentage": candidate_percentage
-            })
-
-        # Display the evaluation results
-        result_df = pd.DataFrame(evaluations)
-        st.write("Evaluation Results:")
-        st.write(result_df)
-
-        # Shortlist the top 3 candidates
-        top_candidates = result_df.sort_values(by="Total Score", ascending=False).head(3)
-        st.write("Top 3 Candidates Shortlisted:")
-        st.write(top_candidates)
-
-else:
-    # Manual candidate input interface
     for question in questions_list:
         answers[question] = st.text_area(question)
 
-    # Button to evaluate the answers
-    if st.button("Evaluate Answers"):
-        total_score = 0
-        evaluations = []
-
-        # Evaluate each answer and calculate the total score
-        for question in questions_list:
-            answer = answers[question]
-            if answer:
+    if st.button("Submit Answers"):
+        if candidate_name and all(answers.values()):
+            total_score = 0
+            evaluations = []
+            for question in questions_list:
+                answer = answers[question]
                 score, evaluation = evaluate_answer(question, answer)
                 if score is not None:
                     evaluations.append(score)
                     total_score += score
                 st.write(f"Evaluation for '{question}': {evaluation}")
 
-        # Calculate the average score
-        if evaluations:
-            average_score = total_score / len(evaluations)
+            average_score = total_score / len(evaluations) if evaluations else 0
             percentage = (average_score / 10) * 100  # Convert to percentage (out of 10)
+
+            st.write(f"Total Score: {total_score}/50")
             st.write(f"Average Evaluation Score: {average_score}/10")
             st.write(f"Percentage: {percentage:.2f}%")
+
+            # Store responses in session_state for admin
+            if "candidates" not in st.session_state:
+                st.session_state.candidates = []
+
+            st.session_state.candidates.append({
+                "name": candidate_name,
+                "answers": answers,
+                "score": total_score,
+                "average_score": average_score,
+                "percentage": percentage
+            })
+
+            st.success("Your responses have been submitted and evaluated!")
+
+    # Refresh button to clear the inputs
+    if st.button("Clear Responses"):
+        st.experimental_rerun()
+
+# Admin Page
+elif page == "Admin Page":
+    st.header("Admin - Candidate Evaluations")
+
+    # Option to upload CSV
+    uploaded_file = st.file_uploader("Upload CSV file with candidate responses", type=["csv"])
+
+    if uploaded_file is not None:
+        df = pd.read_csv(uploaded_file)
+        
+        # Ensure the CSV has the necessary columns (Name and Answers)
+        required_columns = ["Name", "Answer 1", "Answer 2", "Answer 3", "Answer 4", "Answer 5"]
+        if not all(col in df.columns for col in required_columns):
+            st.error("CSV must contain columns: Name, Answer 1, Answer 2, Answer 3, Answer 4, Answer 5.")
         else:
-            st.write("Please provide answers to all questions.")
+            st.write(df)
+
+            # Evaluate the uploaded responses
+            total_score = 0
+            evaluations = []
+            for index, row in df.iterrows():
+                candidate_name = row["Name"]
+                st.write(f"Evaluating {candidate_name}'s Responses:")
+
+                candidate_scores = []
+                for i, question in enumerate(questions_list):
+                    answer = row[f"Answer {i + 1}"]
+                    score, evaluation = evaluate_answer(question, answer)
+                    if score is not None:
+                        candidate_scores.append(score)
+                        st.write(f"Question: {question}")
+                        st.write(f"Answer: {answer}")
+                        st.write(f"Evaluation: {evaluation}")
+                        st.write(f"Score: {score}")
+
+                candidate_total_score = sum(candidate_scores)
+                candidate_average_score = candidate_total_score / len(candidate_scores) if candidate_scores else 0
+                candidate_percentage = (candidate_average_score / 10) * 100  # Convert to percentage
+
+                total_score += candidate_total_score
+                evaluations.append({
+                    "Name": candidate_name,
+                    "Total Score": candidate_total_score,
+                    "Average Score": candidate_average_score,
+                    "Percentage": candidate_percentage
+                })
+
+            # Display the evaluation results
+            result_df = pd.DataFrame(evaluations)
+            st.write("Evaluation Results:")
+            st.write(result_df)
+
+            # Shortlist the top 3 candidates
+            top_candidates = result_df.sort_values(by="Total Score", ascending=False).head(3)
+            st.write("Top 3 Candidates Shortlisted:")
+            st.write(top_candidates)
+
+    else:
+        st.write("Upload a CSV to evaluate multiple candidates.")
+        
+    # Alternatively, you can view the candidates evaluated so far in session_state
+    if "candidates" in st.session_state:
+        st.write("Candidates Evaluated So Far:")
+        st.write(pd.DataFrame(st.session_state.candidates))
+
+        # Shortlist top 3 based on scores from session_state
+        top_candidates_session = sorted(st.session_state.candidates, key=lambda x: x["score"], reverse=True)[:3]
+        st.write("Top 3 Candidates Shortlisted from Session:")
+        st.write(pd.DataFrame(top_candidates_session))
