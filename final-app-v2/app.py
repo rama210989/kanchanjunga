@@ -1,13 +1,13 @@
 import openai
-import streamlit as st
-import random
-import re
 import pandas as pd
+import streamlit as st
+import re
+import random
 
-# Set your OpenAI API key
+# Set OpenAI API key from Streamlit secrets
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-# Predefined questions
+# List of 5 predefined questions
 questions_list = [
     "Why do you want to work with us?",
     "What is your greatest strength?",
@@ -16,16 +16,7 @@ questions_list = [
     "What are your salary expectations?"
 ]
 
-# Dummy answers for random generation
-dummy_answers = [
-    "I am passionate about the work you do.",
-    "My greatest strength is my problem-solving ability.",
-    "You are a leader in the industry with a strong reputation.",
-    "In 5 years, I see myself growing into a leadership role.",
-    "I expect a fair and competitive salary aligned with my skills."
-]
-
-# Function to evaluate one answer
+# Function to evaluate the answer
 def evaluate_answer(question, answer):
     prompt = f"Question: {question}\nAnswer: {answer}\n\nEvaluate this response on a scale of 1 to 10 and explain why."
     try:
@@ -39,31 +30,45 @@ def evaluate_answer(question, answer):
             temperature=0.7
         )
         evaluation = response['choices'][0]['message']['content'].strip()
+
+        # Use regular expression to extract a score between 1 and 10
         score_match = re.search(r'(\d+)', evaluation)
         if score_match:
             return int(score_match.group(1)), evaluation
         else:
             return None, evaluation
     except Exception as e:
-        return None, f"Error: {e}"
+        return None, f"Error evaluating answer: {e}"
 
-# Initialize session state
-if "candidates" not in st.session_state:
-    st.session_state.candidates = []
+# Streamlit UI Components
+st.title("Interview Question Evaluator")
 
-# Sidebar for navigation
-st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Candidate Page", "Admin Page"])
+# Define pages
+PAGES = {
+    "Candidate": "candidate_page",
+    "Admin": "admin_page"
+}
 
-if page == "Candidate Page":
-    st.title("Candidate Interview Submission")
+# Sidebar navigation
+page = st.sidebar.radio("Select your role", options=PAGES.keys())
 
-    name = st.text_input("Enter your Name")
+# Candidate Page
+if page == "Candidate":
+    st.subheader("Candidate Page")
+    
+    # Initialize session state if it doesn't exist
+    if "candidates" not in st.session_state:
+        st.session_state.candidates = []
+
+    # Candidate Name Input
+    name = st.text_input("Enter your name")
+
+    # Dictionary to store answers
     answers = {}
-
     for question in questions_list:
         answers[question] = st.text_area(question)
 
+    # Submit Answers Button
     if st.button("Submit Answers"):
         if not name.strip():
             st.error("Name is mandatory. Please enter your name.")
@@ -92,37 +97,18 @@ if page == "Candidate Page":
             st.session_state.candidates.append(candidate_record)
             st.success("Your answers have been submitted and evaluated!")
 
-elif page == "Admin Page":
-    st.title("Admin Panel - View and Shortlist Candidates")
+            # Refresh button to clear answers
+            if st.button("Refresh Answers"):
+                st.session_state.candidates.clear()
+                st.experimental_rerun()
 
-    # Button to generate dummy candidates
-    if st.button("Generate 10 Dummy Candidates"):
-        for i in range(10):
-            name = f"Candidate_{random.randint(1000, 9999)}"
-            evaluations = []
-            total_score = 0
-            for question in questions_list:
-                answer = random.choice(dummy_answers)
-                score, evaluation = evaluate_answer(question, answer)
-                evaluations.append({
-                    "question": question,
-                    "answer": answer,
-                    "score": score,
-                    "evaluation": evaluation
-                })
-                total_score += score if score else 0
-
-            candidate_record = {
-                "name": name,
-                "evaluations": evaluations,
-                "total_score": total_score,
-                "average_score": total_score / len(questions_list)
-            }
-            st.session_state.candidates.append(candidate_record)
-        st.success("Generated 10 dummy candidates!")
-
-    # Display table of all candidates
+# Admin Page
+elif page == "Admin":
+    st.subheader("Admin Page")
+    
+    # Check if candidates exist
     if st.session_state.candidates:
+        # Create a dataframe from the candidates list
         data = {
             "Name": [c["name"] for c in st.session_state.candidates],
             "Total Score": [c["total_score"] for c in st.session_state.candidates],
@@ -131,7 +117,7 @@ elif page == "Admin Page":
         df = pd.DataFrame(data)
         st.dataframe(df)
 
-        # Shortlist Top 3
+        # Shortlist Top 3 Candidates
         if st.button("Shortlist Top 3 Candidates"):
             top_candidates = sorted(st.session_state.candidates, key=lambda x: x["total_score"], reverse=True)[:3]
             st.subheader("Top 3 Shortlisted Candidates:")
@@ -160,6 +146,5 @@ elif page == "Admin Page":
                 file_name="candidates_evaluations.csv",
                 mime="text/csv"
             )
-
     else:
         st.info("No candidates yet. Please submit responses or generate dummy candidates.")
