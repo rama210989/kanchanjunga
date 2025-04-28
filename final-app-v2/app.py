@@ -2,6 +2,7 @@ import openai
 import streamlit as st
 import pandas as pd
 import re
+import json
 
 # Set OpenAI API key from Streamlit secrets
 openai.api_key = st.secrets["OPENAI_API_KEY"]
@@ -87,7 +88,8 @@ if page == "Candidate Page":
                 "answers": answers,
                 "score": total_score,
                 "average_score": average_score,
-                "percentage": percentage
+                "percentage": percentage,
+                "evaluations": evaluations  # Store individual question evaluations
             })
 
             st.success("Your responses have been submitted and evaluated!")
@@ -103,9 +105,12 @@ elif page == "Admin Page":
     # Option to upload CSV
     uploaded_file = st.file_uploader("Upload CSV file with candidate responses", type=["csv"])
 
+    # Storage for combined candidates
+    combined_candidates = []
+
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
-        
+
         # Ensure the CSV has the necessary columns (Name and Answers)
         required_columns = ["Name", "Answer 1", "Answer 2", "Answer 3", "Answer 4", "Answer 5"]
         if not all(col in df.columns for col in required_columns):
@@ -114,54 +119,80 @@ elif page == "Admin Page":
             st.write(df)
 
             # Evaluate the uploaded responses
-            total_score = 0
-            evaluations = []
             for index, row in df.iterrows():
                 candidate_name = row["Name"]
-                st.write(f"Evaluating {candidate_name}'s Responses:")
+                candidate_answers = {
+                    questions_list[i]: row[f"Answer {i+1}"] for i in range(len(questions_list))
+                }
 
                 candidate_scores = []
+                evaluations = []
+                total_score = 0
                 for i, question in enumerate(questions_list):
-                    answer = row[f"Answer {i + 1}"]
+                    answer = candidate_answers[question]
                     score, evaluation = evaluate_answer(question, answer)
                     if score is not None:
                         candidate_scores.append(score)
-                        st.write(f"Question: {question}")
-                        st.write(f"Answer: {answer}")
-                        st.write(f"Evaluation: {evaluation}")
-                        st.write(f"Score: {score}")
+                        evaluations.append({
+                            "question": question,
+                            "answer": answer,
+                            "evaluation": evaluation,
+                            "score": score
+                        })
+                        total_score += score
 
-                candidate_total_score = sum(candidate_scores)
-                candidate_average_score = candidate_total_score / len(candidate_scores) if candidate_scores else 0
+                candidate_average_score = total_score / len(candidate_scores) if candidate_scores else 0
                 candidate_percentage = (candidate_average_score / 10) * 100  # Convert to percentage
 
-                total_score += candidate_total_score
-                evaluations.append({
-                    "Name": candidate_name,
-                    "Total Score": candidate_total_score,
-                    "Average Score": candidate_average_score,
-                    "Percentage": candidate_percentage
+                combined_candidates.append({
+                    "name": candidate_name,
+                    "total_score": total_score,
+                    "average_score": candidate_average_score,
+                    "percentage": candidate_percentage,
+                    "evaluations": evaluations
                 })
 
-            # Display the evaluation results
-            result_df = pd.DataFrame(evaluations)
-            st.write("Evaluation Results:")
-            st.write(result_df)
-
-            # Shortlist the top 3 candidates
-            top_candidates = result_df.sort_values(by="Total Score", ascending=False).head(3)
-            st.write("Top 3 Candidates Shortlisted:")
-            st.write(top_candidates)
-
-    else:
-        st.write("Upload a CSV to evaluate multiple candidates.")
-        
-    # Alternatively, you can view the candidates evaluated so far in session_state
+    # Add candidates from session (already evaluated ones)
     if "candidates" in st.session_state:
-        st.write("Candidates Evaluated So Far:")
-        st.write(pd.DataFrame(st.session_state.candidates))
+        combined_candidates.extend(st.session_state.candidates)
 
-        # Shortlist top 3 based on scores from session_state
-        top_candidates_session = sorted(st.session_state.candidates, key=lambda x: x["score"], reverse=True)[:3]
-        st.write("Top 3 Candidates Shortlisted from Session:")
-        st.write(pd.DataFrame(top_candidates_session))
+    # Combine and sort candidates by total score (descending)
+    combined_candidates_sorted = sorted(combined_candidates, key=lambda x: x["total_score"], reverse=True)
+
+    # Display combined list of candidates
+    st.write("Combined Candidates List (from CSV and Session):")
+    result_df = pd.DataFrame([{
+        "Name": c["name"],
+        "Total Score": c["total_score"],
+        "Percentage": c["percentage"]
+    } for c in combined_candidates_sorted])
+
+    st.write(result_df)
+
+    # Shortlist the top 3 candidates
+    top_candidates = result_df.head(3)
+    st.write("Top 3 Candidates Shortlisted:")
+    st.write(top_candidates)
+
+    # Show the detailed evaluation of each candidate
+    if st.button("Show Detailed Evaluation"):
+        detailed_eval = []
+        for candidate in combined_candidates_sorted:
+            detailed_eval.append({
+                "Name": candidate["name"],
+                "Total Score": candidate["total_score"],
+                "Percentage": candidate["percentage"],
+                "Evaluations": json.dumps(candidate["evaluations"], indent=4)  # Store evaluations in JSON format
+            })
+        st.write(pd.DataFrame(detailed_eval))
+
+    # Allow download of detailed evaluation as JSON file
+    if st.button("Download Detailed Evaluations"):
+        eval_json = json.dumps([{
+            "Name": c["name"],
+            "Total Score": c["total_score"],
+            "Percentage": c["percentage"],
+            "Evaluations": c["evaluations"]
+        } for c in combined_candidates_sorted], indent=4)
+
+        st.download_button("Download", eval_json, file_name="candidate_evaluations.json")
