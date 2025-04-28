@@ -2,7 +2,6 @@ import openai
 import pandas as pd
 import streamlit as st
 import re
-import random
 
 # Set OpenAI API key from Streamlit secrets
 openai.api_key = st.secrets["OPENAI_API_KEY"]
@@ -91,7 +90,8 @@ if page == "Candidate":
                 "name": name,
                 "evaluations": evaluations,
                 "total_score": total_score,
-                "average_score": total_score / len(questions_list)
+                "average_score": total_score / len(questions_list),
+                "percentage": (total_score / (len(questions_list) * 10)) * 100  # Calculate percentage
             }
 
             st.session_state.candidates.append(candidate_record)
@@ -112,8 +112,16 @@ elif page == "Admin":
         data = {
             "Name": [c["name"] for c in st.session_state.candidates],
             "Total Score": [c["total_score"] for c in st.session_state.candidates],
-            "Average Score": [round(c["average_score"], 2) for c in st.session_state.candidates]
+            "Percentage": [round(c["percentage"], 2) for c in st.session_state.candidates]
         }
+        
+        # Add detailed responses and evaluations for each candidate
+        for question in questions_list:
+            data[f"Response: {question}"] = [eval["answer"] for c in st.session_state.candidates for eval in c["evaluations"] if eval["question"] == question]
+            data[f"Evaluation: {question}"] = [eval["evaluation"] for c in st.session_state.candidates for eval in c["evaluations"] if eval["question"] == question]
+            data[f"Score: {question}"] = [eval["score"] for c in st.session_state.candidates for eval in c["evaluations"] if eval["question"] == question]
+
+        # Create the DataFrame
         df = pd.DataFrame(data)
         st.dataframe(df)
 
@@ -136,6 +144,7 @@ elif page == "Admin":
                         "Score": eval["score"],
                         "Evaluation Feedback": eval["evaluation"],
                         "Total Score": candidate["total_score"],
+                        "Percentage": candidate["percentage"],
                         "Average Score": round(candidate["average_score"], 2)
                     })
             full_df = pd.DataFrame(full_data)
