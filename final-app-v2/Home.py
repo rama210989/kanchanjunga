@@ -6,7 +6,7 @@ from admin.admin import admin_page  # Corrected import path
 st.set_page_config(page_title="Candidate Evaluation App", layout="wide")
 
 # App title
-st.title("🏆 Candidate Evaluation App")
+st.title("Candidate Evaluation App")
 
 # Main page options for navigation
 page = st.sidebar.radio("Choose a page", ("Home", "Candidate Page", "Admin Page"))
