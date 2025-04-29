@@ -94,15 +94,17 @@ def admin_page():
 
         for candidate in st.session_state.evaluated_candidates:
             st.markdown(f"### {candidate['Name']}")
+            total_score = 0
             for idx in range(5):
                 st.write(f"**Q{idx+1}:** {candidate['Responses'][idx]}")
-                st.write(f"**Evaluation:** {candidate['Evaluations'][idx]}")
-                st.write(f"**Score:** {candidate['Scores'][idx]}/10")
-                st.write(f"**Evaluation Response:** {candidate['Response Evaluations'][idx][0]}")  # Display evaluation text
-                st.write(f"**Score for Evaluation:** {candidate['Response Evaluations'][idx][1]}/10")  # Display score for evaluation
+                st.write(f"**Evaluation:** {candidate['Evaluations'][idx]}")  # GPT's detailed response
+                st.write(f"**Score:** {candidate['Scores'][idx]}/10")  # Score for that question
+                total_score += candidate['Scores'][idx]  # Accumulating total score for the candidate
                 st.write("---")
-            st.write(f"**Total Score:** {candidate['Total Score']}/50")
-            st.write(f"**Percentage:** {candidate['Percentage']}%")
+
+            # Total score and percentage at the end of each candidate's evaluation
+            st.write(f"**Total Score:** {total_score}/50")
+            st.write(f"**Percentage:** {round((total_score / 50) * 100, 2)}%")
             st.divider()
 
         if st.button("🏆 Shortlist Top 3 Candidates"):
