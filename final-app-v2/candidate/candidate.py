@@ -65,6 +65,7 @@ Evaluate the answer in 1-2 lines. Then give a score out of 10.
         if "all_candidates" not in st.session_state:
             st.session_state["all_candidates"] = []
 
+        # Append candidate responses and evaluations to session state
         st.session_state["all_candidates"].append({
             "name": candidate_name,
             "questions": questions,
@@ -75,3 +76,13 @@ Evaluate the answer in 1-2 lines. Then give a score out of 10.
         })
 
         st.success(f"✅ Responses submitted and evaluated for {candidate_name}!")
+
+        # Display submission confirmation with summary
+        st.write(f"### Summary for {candidate_name}:")
+        for i, (q, a, feedback, score) in enumerate(zip(questions, answers, gpt_feedbacks, gpt_scores)):
+            st.write(f"**Q{i+1}: {q}**")
+            st.write(f"Answer: {a}")
+            st.write(f"Evaluation: {feedback}")
+            st.write(f"Score: {score}/10")
+        
+        st.write(f"**Total Score: {total_score}/50**")
