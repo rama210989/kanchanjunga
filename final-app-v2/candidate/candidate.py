@@ -22,10 +22,6 @@ def candidate_page():
             answers.append(st.text_area(f"Q{i+1}: {q}", key=f"q{i}"))
         submitted = st.form_submit_button("Submit Responses")
 
-    # Refresh
-    if st.button("🔄 Refresh"):
-        st.experimental_rerun()
-
     if submitted:
         gpt_feedbacks = []
         gpt_scores = []
