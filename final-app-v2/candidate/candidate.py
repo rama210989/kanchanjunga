@@ -1,47 +1,77 @@
 import streamlit as st
-
-# Dummy evaluator function (replace with real logic)
-def evaluate_candidate(responses):
-    feedback = []
-    total_score = 0
-    for i, answer in enumerate(responses):
-        score = min(len(answer.strip()) // 10, 10)  # Simple logic
-        fb = f"Answer {i+1} evaluation: {score}/10"
-        feedback.append(fb)
-        total_score += score
-    return total_score, feedback
+import openai
 
 def candidate_page():
-    st.title("🤖 Candidate Interview Form")
+    st.header("🧑‍💼 Candidate Interview Form")
 
-    # Session storage for all candidates
-    if "all_candidates" not in st.session_state:
-        st.session_state["all_candidates"] = []
+    # Define the questions
+    questions = [
+        "What's your name?",
+        "What do you know about our company?",
+        "Why do you want to join our company?",
+        "What are your biggest strengths?",
+        "What are your salary expectations?"
+    ]
 
+    # Store answers
+    answers = []
+
+    # Create input form
     with st.form("candidate_form"):
-        name = st.text_input("Candidate Name")
-        q1 = st.text_area("1. What do you know about our company?")
-        q2 = st.text_area("2. Why do you want to join our company?")
-        q3 = st.text_area("3. What are your biggest strengths?")
-        q4 = st.text_area("4. What are your salary expectations?")
-        q5 = st.text_area("5. Where do you see yourself in 5 years?")
-        submit = st.form_submit_button("Submit")
+        candidate_name = st.text_input("Candidate Name")
+        for i, q in enumerate(questions):
+            answers.append(st.text_area(f"Q{i+1}: {q}", key=f"q{i}"))
 
-    if submit:
-        if all([name.strip(), q1, q2, q3, q4, q5]):
-            answers = [q1, q2, q3, q4, q5]
-            score, feedback = evaluate_candidate(answers)
-            candidate_data = {
-                "name": name,
-                "answers": answers,
-                "score": score,
-                "feedback": feedback
-            }
-            st.session_state.all_candidates.append(candidate_data)
-            st.success(f"Responses submitted for {name}!")
+        submitted = st.form_submit_button("Submit Responses")
 
-        else:
-            st.error("Please answer all questions before submitting.")
-
-    if st.button("Refresh"):
+    # Refresh button
+    if st.button("🔄 Refresh"):
         st.experimental_rerun()
+
+    if submitted:
+        # GPT evaluation
+        gpt_feedbacks = []
+        gpt_scores = []
+
+        for q, a in zip(questions, answers):
+            prompt = f"""
+Question: {q}
+Candidate's Answer: {a}
+
+Evaluate the answer in 1-2 lines. Then give a score out of 10.
+"""
+            try:
+                response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0
+                )
+                content = response["choices"][0]["message"]["content"]
+                gpt_feedbacks.append(content)
+
+                # Extract score
+                lines = content.splitlines()
+                score_line = next((line for line in lines if "Score" in line), "Score: 0/10")
+                score = int(score_line.split(":")[1].split("/")[0].strip())
+                gpt_scores.append(score)
+
+            except Exception as e:
+                gpt_feedbacks.append(f"Error during evaluation: {str(e)}")
+                gpt_scores.append(0)
+
+        total_score = sum(gpt_scores)
+
+        # Save to session state
+        if "all_candidates" not in st.session_state:
+            st.session_state["all_candidates"] = []
+
+        st.session_state["all_candidates"].append({
+            "name": candidate_name,
+            "questions": questions,
+            "answers": answers,
+            "feedbacks": gpt_feedbacks,
+            "scores": gpt_scores,
+            "total_score": total_score
+        })
+
+        st.success(f"✅ Responses submitted and evaluated for {candidate_name}!")
