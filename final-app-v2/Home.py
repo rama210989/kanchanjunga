@@ -1,6 +1,6 @@
 import streamlit as st
-from candidate import candidate_page
-from admin import admin_page
+from candidate.candidate import candidate_page  # Corrected import path
+from admin.admin import admin_page  # Corrected import path
 
 # Set up page configuration
 st.set_page_config(page_title="Candidate Evaluation App", layout="wide")
@@ -21,7 +21,7 @@ if page == "Home":
     """)
 
 elif page == "Candidate Page":
-    candidate_page()
+    candidate_page()  # Render the candidate page
 
 elif page == "Admin Page":
-    admin_page()
+    admin_page()  # Render the admin page
