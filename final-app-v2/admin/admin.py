@@ -47,22 +47,28 @@ def admin_page():
             response_evaluations = []  # To hold the evaluation response text for each question
 
             for response in candidate["responses"]:
-                prompt = f"Evaluate the following response on a scale of 1-10:\n\n'{response}'\n\nScore (only number):"
+                prompt = f"Evaluate the following response on a scale of 1-10, providing detailed reasoning for the score:\n\n'{response}'\n\nScore (only number):"
+                
                 try:
+                    # Get evaluation from OpenAI API
                     completion = openai.ChatCompletion.create(
                         model="gpt-3.5-turbo",
                         messages=[{"role": "user", "content": prompt}]
                     )
                     evaluation_text = completion.choices[0].message.content.strip()
-
+                    
+                    # Debug print to check OpenAI response
+                    print(f"OpenAI evaluation response: {evaluation_text}")
+                    
+                    # Extract score (assumes OpenAI response is just a number)
                     try:
                         score = int(evaluation_text)
-                    except:
-                        score = 5  # Default fallback score
+                    except ValueError:
+                        score = 5  # Default fallback score if parsing fails
                     
-                    evaluations.append(evaluation_text)  # Add the evaluation response
-                    scores.append(score)  # Add the score
-                    response_evaluations.append((evaluation_text, score))  # Tuple of response evaluation and score
+                    evaluations.append(evaluation_text)  # Store the detailed evaluation
+                    scores.append(score)  # Store the score
+                    response_evaluations.append((evaluation_text, score))  # Store both evaluation and score
 
                 except Exception as e:
                     st.error(f"OpenAI Error: {e}")
@@ -70,6 +76,7 @@ def admin_page():
                     scores.append(5)
                     response_evaluations.append(("Error in evaluation", 5))  # Handle error response gracefully
 
+            # Calculate total score and percentage
             total_score = sum(scores)
             percentage = round((total_score / 50) * 100, 2)
 
@@ -107,6 +114,7 @@ def admin_page():
             st.write(f"**Percentage:** {round((total_score / 50) * 100, 2)}%")
             st.divider()
 
+        # Option to shortlist top 3 candidates
         if st.button("🏆 Shortlist Top 3 Candidates"):
             top3 = sorted(st.session_state.evaluated_candidates, key=lambda x: x["Percentage"], reverse=True)[:3]
             st.subheader("🥇 Top 3 Candidates:")
