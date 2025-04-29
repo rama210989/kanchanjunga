@@ -20,6 +20,11 @@ if page == "Home":
     - Go to **Admin Page** to upload CSVs, evaluate all candidates, and select Top 3.
     """)
 
+    # Button to clear all records from session state
+    if st.button("Clear All Records"):
+        st.session_state.clear()  # Clear all session state data
+        st.success("✅ All records cleared!")
+
 elif page == "Candidate Page":
     candidate_page()  # Render the candidate page
 
