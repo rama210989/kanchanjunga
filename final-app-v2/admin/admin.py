@@ -1,25 +1,39 @@
 import streamlit as st
 
 def admin_page():
-    st.title("🧠 Admin Panel: Evaluations")
+    st.header("📋 Summary Table")
 
     if "all_candidates" not in st.session_state or not st.session_state["all_candidates"]:
-        st.info("No candidate data submitted yet.")
+        st.info("No candidate data available yet.")
         return
 
-    # Summary Table
-    st.header("📋 Summary Table")
-    summary_data = [
-        {"Candidate": c["name"], "Total Score": c["score"]}
-        for c in st.session_state["all_candidates"]
-    ]
+    # Build summary table
+    summary_data = []
+    for candidate in st.session_state["all_candidates"]:
+        summary_data.append({
+            "Candidate": candidate["name"],
+            "Total Score": candidate["total_score"]
+        })
+
     st.table(summary_data)
 
-    # Detailed Evaluations
-    st.header("📝 Detailed Evaluations")
-    for idx, candidate in enumerate(st.session_state["all_candidates"], 1):
+    # Detailed evaluations
+    st.markdown("## 📝 Detailed Evaluations")
+
+    for idx, candidate in enumerate(st.session_state["all_candidates"], start=1):
         st.subheader(f"{idx}. {candidate['name']}")
-        for i, feedback in enumerate(candidate["feedback"]):
-            st.write(f"Q{i+1}: {feedback}")
-        st.markdown(f"**Total Score:** {candidate['score']}/50")
-        st.markdown("---")
+
+        for i, (question, answer, feedback, score) in enumerate(zip(
+            candidate["questions"], 
+            candidate["answers"], 
+            candidate["feedbacks"], 
+            candidate["scores"]
+        ), start=1):
+            st.markdown(f"**Q{i}: {question}**")
+            st.markdown(f"- **Answer:** {answer}")
+            st.markdown(f"- **Evaluation:** {feedback}")
+            st.markdown(f"- **Score:** {score}/10")
+            st.markdown("---")
+
+        st.markdown(f"**✅ Total Score: {candidate['total_score']}/50**")
+        st.markdown("***")
