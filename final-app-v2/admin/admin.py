@@ -1,46 +1,31 @@
 import streamlit as st
+import pandas as pd
 
 def admin_page():
     st.header("📋 Summary Table")
 
-    if "all_candidates" not in st.session_state or not st.session_state["all_candidates"]:
-        st.info("No candidate data available yet.")
+    if "all_candidates" not in st.session_state or len(st.session_state["all_candidates"]) == 0:
+        st.info("No candidates submitted yet.")
         return
 
-    # Build summary table
-    summary_data = []
-    for candidate in st.session_state["all_candidates"]:
-        name = candidate.get("name", "Unknown")
-        total_score = candidate.get("total_score", 0)
-        summary_data.append({
-            "Candidate": name,
-            "Total Score": total_score
-        })
+    # Summary Table
+    summary_data = [{
+        "Candidate": c["name"],
+        "Total Score": c["total_score"]
+    } for c in st.session_state["all_candidates"]]
+    st.dataframe(pd.DataFrame(summary_data))
 
-    st.table(summary_data)
-
-    # Detailed evaluations
-    st.markdown("## 📝 Detailed Evaluations")
-
+    st.markdown("### 📝 Detailed Evaluations")
     for idx, candidate in enumerate(st.session_state["all_candidates"], start=1):
-        st.subheader(f"{idx}. {candidate.get('name', 'Unknown')}")
+        st.markdown(f"**{idx}. {candidate['name']}**")
+        for i in range(len(candidate["questions"])):
+            st.markdown(f"""
+**Q{i+1}: {candidate['questions'][i]}**
 
-        questions = candidate.get("questions", [])
-        answers = candidate.get("answers", [])
-        feedbacks = candidate.get("feedbacks", [])
-        scores = candidate.get("scores", [])
+**Answer:** {candidate['answers'][i]}
 
-        for i in range(len(questions)):
-            question = questions[i] if i < len(questions) else "N/A"
-            answer = answers[i] if i < len(answers) else "N/A"
-            feedback = feedbacks[i] if i < len(feedbacks) else "No feedback"
-            score = scores[i] if i < len(scores) else 0
+**Evaluation:** {candidate['feedbacks'][i]}
 
-            st.markdown(f"**Q{i+1}: {question}**")
-            st.markdown(f"- **Answer:** {answer}")
-            st.markdown(f"- **Evaluation:** {feedback}")
-            st.markdown(f"- **Score:** {score}/10")
-            st.markdown("---")
-
-        st.markdown(f"**✅ Total Score: {candidate.get('total_score', 0)}/50**")
-        st.markdown("***")
+**Score:** {candidate['scores'][i]}/10
+""")
+        st.markdown(f"✅ **Total Score: {candidate['total_score']}/50**")
