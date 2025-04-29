@@ -47,7 +47,9 @@ def admin_page():
             response_evaluations = []  # To hold the evaluation response text for each question
 
             for response in candidate["responses"]:
-                prompt = f"Evaluate the following response on a scale of 1-10, providing detailed reasoning for the score:\n\n'{response}'\n\nScore (only number):"
+                prompt = f"""Evaluate the following response to a question and provide both detailed feedback and a score out of 10:
+                \nResponse: '{response}'
+                \n\nEvaluation (provide both feedback and score out of 10):"""
                 
                 try:
                     # Get evaluation from OpenAI API
@@ -60,15 +62,17 @@ def admin_page():
                     # Debug print to check OpenAI response
                     print(f"OpenAI evaluation response: {evaluation_text}")
                     
-                    # Extract score (assumes OpenAI response is just a number)
+                    # Extract score (assumes OpenAI response includes a score)
                     try:
-                        score = int(evaluation_text)
-                    except ValueError:
+                        score = int(evaluation_text.split("Score:")[-1].strip().split("/")[0])
+                        evaluation = evaluation_text.split("Score:")[0].strip()
+                    except:
                         score = 5  # Default fallback score if parsing fails
+                        evaluation = evaluation_text
                     
-                    evaluations.append(evaluation_text)  # Store the detailed evaluation
+                    evaluations.append(evaluation)  # Store the detailed evaluation
                     scores.append(score)  # Store the score
-                    response_evaluations.append((evaluation_text, score))  # Store both evaluation and score
+                    response_evaluations.append((evaluation, score))  # Store both evaluation and score
 
                 except Exception as e:
                     st.error(f"OpenAI Error: {e}")
