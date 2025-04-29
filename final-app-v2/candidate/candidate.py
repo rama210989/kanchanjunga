@@ -1,6 +1,5 @@
 import streamlit as st
 import openai
-from streamlit.runtime.scriptrunner import rerun  # NEW import
 
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
@@ -37,7 +36,7 @@ def candidate_page():
             if answer.strip() != "":
                 st.session_state.responses.append(answer)
                 st.session_state.current_question += 1
-                rerun()  # UPDATED HERE
+                st.experimental_rerun()  # fallback that works in most stable versions
             else:
                 st.warning("Please enter your response before continuing.")
     elif not st.session_state.evaluated:
