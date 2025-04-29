@@ -1,5 +1,6 @@
 import streamlit as st
 import openai
+from streamlit.runtime.scriptrunner import rerun  # NEW import
 
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
@@ -36,7 +37,7 @@ def candidate_page():
             if answer.strip() != "":
                 st.session_state.responses.append(answer)
                 st.session_state.current_question += 1
-                st.experimental_rerun()
+                rerun()  # UPDATED HERE
             else:
                 st.warning("Please enter your response before continuing.")
     elif not st.session_state.evaluated:
@@ -83,7 +84,6 @@ def candidate_page():
             st.markdown("---")
         st.subheader(f"✅ Total Score: {fb['total']}/50 ({fb['percent']}%)")
 
-        # Save this candidate's data in session
         if "manual_candidates" not in st.session_state:
             st.session_state.manual_candidates = []
         st.session_state.manual_candidates.append(fb)
