@@ -1,16 +1,11 @@
 import streamlit as st
-import openai
-
-openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 def candidate_page():
-    st.title("🤖 Candidate Chatbot")
+    st.title("🤖 Candidate Form")
 
     # Initialize session state for candidate responses
     if "candidate_name" not in st.session_state:
         st.session_state.candidate_name = ""
-    if "current_question" not in st.session_state:
-        st.session_state.current_question = 0
     if "responses" not in st.session_state:
         st.session_state.responses = []
 
@@ -27,28 +22,28 @@ def candidate_page():
         st.session_state.candidate_name = st.text_input("Enter your name:")
         st.stop()
 
-    # Display questions and collect responses
-    if st.session_state.current_question < len(questions):
-        question = questions[st.session_state.current_question]
-        answer = st.text_area(f"Q{st.session_state.current_question + 1}: {question}")
-        if st.button("Next"):
-            if answer.strip() != "":
-                st.session_state.responses.append(answer)
-                st.session_state.current_question += 1
-                st.experimental_rerun()
-            else:
-                st.warning("Please enter your response before continuing.")
-    elif st.session_state.current_question == len(questions):
-        st.success("🎉 Thank you for completing the questions!")
-        if st.button("Submit Responses"):
-            # After submission, trigger the evaluation process
-            st.session_state.evaluated = False
-            st.experimental_rerun()
+    # Create a form for collecting responses
+    with st.form(key="candidate_form"):
+        responses = []
+        for i, question in enumerate(questions):
+            response = st.text_area(f"Q{i+1}: {question}")
+            responses.append(response)
 
+        submit_button = st.form_submit_button(label="Submit Responses")
+
+    # Handle form submission
+    if submit_button:
+        if all(response.strip() != "" for response in responses):
+            st.session_state.responses = responses
+            st.session_state.evaluated = False
+            st.success("🎉 Thank you for completing the questions!")
+            st.experimental_rerun()
+        else:
+            st.warning("Please fill out all responses before submitting.")
+
+    # Reset page for new candidate (refresh)
     if st.button("Refresh"):
-        # Reset everything for the next candidate
         st.session_state.candidate_name = ""
-        st.session_state.current_question = 0
         st.session_state.responses = []
         st.session_state.evaluated = False
         st.experimental_rerun()
