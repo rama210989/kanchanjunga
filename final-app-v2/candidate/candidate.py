@@ -8,6 +8,8 @@ def candidate_page():
         st.session_state.candidate_name = ""
     if "responses" not in st.session_state:
         st.session_state.responses = []
+    if "evaluated" not in st.session_state:
+        st.session_state.evaluated = False
 
     questions = [
         "What's your name?",
@@ -20,30 +22,30 @@ def candidate_page():
     # Candidate name input
     if st.session_state.candidate_name == "":
         st.session_state.candidate_name = st.text_input("Enter your name:")
-        st.stop()
+        st.stop()  # Stop execution until candidate name is provided
 
     # Create a form for collecting responses
-    with st.form(key="candidate_form"):
-        responses = []
-        for i, question in enumerate(questions):
-            response = st.text_area(f"Q{i+1}: {question}")
-            responses.append(response)
+    if not st.session_state.responses:  # Only show form if no responses are recorded
+        with st.form(key="candidate_form"):
+            responses = []
+            for i, question in enumerate(questions):
+                response = st.text_area(f"Q{i+1}: {question}")
+                responses.append(response)
 
-        submit_button = st.form_submit_button(label="Submit Responses")
+            submit_button = st.form_submit_button(label="Submit Responses")
 
-    # Handle form submission
-    if submit_button:
-        if all(response.strip() != "" for response in responses):
-            st.session_state.responses = responses
-            st.session_state.evaluated = False
-            st.success("🎉 Thank you for completing the questions!")
-            st.experimental_rerun()
-        else:
-            st.warning("Please fill out all responses before submitting.")
+        # Handle form submission
+        if submit_button:
+            if all(response.strip() != "" for response in responses):
+                st.session_state.responses = responses
+                st.session_state.evaluated = False
+                st.success("🎉 Thank you for completing the questions!")
+            else:
+                st.warning("Please fill out all responses before submitting.")
 
-    # Reset page for new candidate (refresh)
+    # Display refresh button for clearing the page and restarting the process
     if st.button("Refresh"):
         st.session_state.candidate_name = ""
         st.session_state.responses = []
         st.session_state.evaluated = False
-        st.experimental_rerun()
+        st.experimental_rerun()  # Reset the session and refresh the page
