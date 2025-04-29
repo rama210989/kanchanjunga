@@ -28,7 +28,7 @@ def admin_page():
 
     **Score:** {candidate['scores'][i]}/10
     """)
-            st.markdown(f"✅ **Total Score: {candidate['total_score']}/50**")
+            st.markdown(f"✅ **Total Score: {candidate['total_score']}/40**")
 
     # Upload CSV for bulk addition
     st.markdown("### 📥 Bulk Upload CSV for Candidates")
@@ -87,7 +87,7 @@ def admin_page():
                         "answers": answers,
                         "feedbacks": gpt_feedbacks,
                         "scores": gpt_scores,
-                        "total_score": total_score
+                        "total_score": total_score  # Ensure total score is correctly calculated
                     })
 
                 st.success("✅ Evaluated and appended CSV entries successfully!")
