@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import openai
+import re  # To use regular expressions for finding the score
 
 def admin_page():
     st.header("📋 Summary Table")
@@ -68,10 +69,17 @@ def admin_page():
                             content = response["choices"][0]["message"]["content"]
                             gpt_feedbacks.append(content)
 
-                            # Extract score
+                            # Extract score (either explicitly or from digits)
                             lines = content.splitlines()
-                            score_line = next((line for line in lines if "Score" in line), "Score: 0/10")
-                            score = int(score_line.split(":")[1].split("/")[0].strip())
+                            score_line = next((line for line in lines if "Score" in line), "")
+                            
+                            if not score_line:  # If no score is found, try to extract a score from digits
+                                match = re.search(r'(\d+)', content)  # Look for any digit
+                                score = int(match.group(1)) if match else 0
+                            else:
+                                # Extract the score if it's mentioned in the form "Score: X/10"
+                                score = int(score_line.split(":")[1].split("/")[0].strip())
+
                             gpt_scores.append(score)
 
                         except Exception as e:
