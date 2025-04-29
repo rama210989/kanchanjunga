@@ -4,18 +4,7 @@ import openai
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 def candidate_page():
-    st.title("🤖 Candidate Chatbot")
-    
-    if "candidate_name" not in st.session_state:
-        st.session_state.candidate_name = ""
-    if "current_question" not in st.session_state:
-        st.session_state.current_question = 0
-    if "responses" not in st.session_state:
-        st.session_state.responses = []
-    if "evaluated" not in st.session_state:
-        st.session_state.evaluated = False
-    if "feedback" not in st.session_state:
-        st.session_state.feedback = {}
+    st.title("📝 Candidate Evaluation Form")
 
     questions = [
         "Tell us about yourself.",
@@ -25,27 +14,26 @@ def candidate_page():
         "Where do you see yourself in 5 years?"
     ]
 
-    if st.session_state.candidate_name == "":
-        st.session_state.candidate_name = st.text_input("What's your name?")
-        st.stop()
+    with st.form("candidate_form"):
+        candidate_name = st.text_input("Your Name")
 
-    if st.session_state.current_question < len(questions):
-        question = questions[st.session_state.current_question]
-        answer = st.text_area(f"Q{st.session_state.current_question+1}: {question}")
-        if st.button("Next"):
-            if answer.strip() != "":
-                st.session_state.responses.append(answer)
-                st.session_state.current_question += 1
-                st.experimental_rerun()  # fallback that works in most stable versions
-            else:
-                st.warning("Please enter your response before continuing.")
-    elif not st.session_state.evaluated:
-        st.success("🎉 Thank you for completing all questions!")
+        answers = []
+        for i, question in enumerate(questions):
+            answer = st.text_area(f"Q{i+1}: {question}", key=f"q_{i}")
+            answers.append(answer)
+
+        submitted = st.form_submit_button("Submit")
+
+    if submitted:
+        if not candidate_name.strip() or any(ans.strip() == "" for ans in answers):
+            st.warning("Please fill out all questions and your name before submitting.")
+            return
 
         with st.spinner("Evaluating your responses..."):
             evaluations = []
             scores = []
-            for r in st.session_state.responses:
+
+            for r in answers:
                 prompt = f"Evaluate the following response on a scale of 1-10, with detailed feedback:\n\n'{r}'"
                 try:
                     completion = openai.ChatCompletion.create(
@@ -62,27 +50,25 @@ def candidate_page():
 
             total_score = sum(scores)
             percentage = round((total_score / 50) * 100, 2)
-            st.session_state.feedback = {
-                "name": st.session_state.candidate_name,
-                "responses": st.session_state.responses,
+
+            st.success("🎉 Evaluation Complete!")
+            st.header(f"📋 Feedback for {candidate_name}")
+            for i in range(5):
+                st.markdown(f"**Q{i+1}:** {questions[i]}")
+                st.markdown(f"**Your Answer:** {answers[i]}")
+                st.markdown(f"**Evaluation:** {evaluations[i]}")
+                st.markdown(f"**Score:** {scores[i]}/10")
+                st.markdown("---")
+            st.subheader(f"✅ Total Score: {total_score}/50 ({percentage}%)")
+
+            # Optionally store feedback in session
+            if "manual_candidates" not in st.session_state:
+                st.session_state.manual_candidates = []
+            st.session_state.manual_candidates.append({
+                "name": candidate_name,
+                "responses": answers,
                 "evaluations": evaluations,
                 "scores": scores,
                 "total": total_score,
                 "percent": percentage
-            }
-            st.session_state.evaluated = True
-
-    if st.session_state.evaluated:
-        fb = st.session_state.feedback
-        st.header(f"📋 Evaluation for {fb['name']}")
-        for i in range(5):
-            st.markdown(f"**Q{i+1}:** {questions[i]}")
-            st.markdown(f"**Your Answer:** {fb['responses'][i]}")
-            st.markdown(f"**Evaluation:** {fb['evaluations'][i]}")
-            st.markdown(f"**Score:** {fb['scores'][i]}/10")
-            st.markdown("---")
-        st.subheader(f"✅ Total Score: {fb['total']}/50 ({fb['percent']}%)")
-
-        if "manual_candidates" not in st.session_state:
-            st.session_state.manual_candidates = []
-        st.session_state.manual_candidates.append(fb)
+            })
