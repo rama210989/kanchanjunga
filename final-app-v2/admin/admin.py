@@ -24,9 +24,9 @@ def admin_page():
         st.subheader(f"{idx}. {candidate['name']}")
 
         for i, (question, answer, feedback, score) in enumerate(zip(
-            candidate["questions"], 
-            candidate["answers"], 
-            candidate["feedbacks"], 
+            candidate["questions"],
+            candidate["answers"],
+            candidate["feedbacks"],
             candidate["scores"]
         ), start=1):
             st.markdown(f"**Q{i}: {question}**")
